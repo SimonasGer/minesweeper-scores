@@ -5,6 +5,18 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<ScoreDb>(options =>
     options.UseSqlite("Data Source=scores.db"));
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("FrontendOnly", policy =>
+    {
+        policy.WithOrigins("http://127.0.0.1:5500")
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
+
+
+
 var app = builder.Build();
 
 // Ensure DB file exists and schema is applied
@@ -14,7 +26,7 @@ using (var scope = app.Services.CreateScope())
     db.Database.Migrate();
 }
 
-// GET top 10 scores (lowest time is best)
+// GET top 5 scores
 app.MapGet("/scores", async (ScoreDb db) =>
     await db.Scores.OrderBy(score => score.Date).Take(5).ToListAsync());
 
@@ -25,5 +37,7 @@ app.MapPost("/scores", async (Score newScore, ScoreDb db) =>
     await db.SaveChangesAsync();
     return Results.Ok();
 });
+
+app.UseCors("FrontendOnly");
 
 app.Run();
